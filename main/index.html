@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Book Manager</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; background: #f9f9f9; }
+    h1 { color: #333; }
+    form { margin-bottom: 20px; }
+    input, button { margin: 5px; padding: 8px; }
+    ul { list-style-type: none; padding: 0; }
+    li { background: white; margin: 5px 0; padding: 10px; border-radius: 6px; }
+    .alert { padding: 10px; margin-bottom: 15px; border-radius: 5px; display: none; }
+    .alert.success { background-color: #d4edda; color: #155724; }
+    .alert.error { background-color: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+  <h1>📚 Book Manager</h1>
+  <div id="alert" class="alert"></div>
+
+  <!-- Add Book Form -->
+  <h2>Add New Book</h2>
+  <form id="add-book-form">
+    <input type="number" id="id" placeholder="ID (optional)" min="1">
+    <input type="text" id="title" placeholder="Title" required>
+    <input type="text" id="author" placeholder="Author" required>
+    <input type="number" id="price" placeholder="Price" required>
+    <input type="date" id="published_date" required>
+    <button type="submit">Add Book</button>
+  </form>
+
+  <!-- Update Book Form -->
+  <h2>Update Book</h2>
+  <form id="update-book-form">
+    <input type="number" id="update-id" placeholder="Book ID" required>
+    <input type="text" id="update-title" placeholder="New Title" required>
+    <input type="text" id="update-author" placeholder="New Author" required>
+    <input type="number" id="update-price" placeholder="New Price" required>
+    <input type="date" id="update-published_date" required>
+    <button type="submit">Update Book</button>
+  </form>
+
+  <!-- Delete Book Form -->
+  <h2>Delete Book</h2>
+  <form id="delete-book-form">
+    <input type="number" id="delete-id" placeholder="Book ID" required>
+    <button type="submit">Delete Book</button>
+  </form>
+
+  <!-- All Books List -->
+  <h2>All Books</h2>
+  <ul id="book-list"></ul>
+
+  <!-- Chart -->
+  <h2>📊 Book Report</h2>
+  <canvas id="bookChart" width="400" height="200"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const API_URL = 'http://127.0.0.1:8000/api/books/';
+    const alertBox = document.getElementById('alert');
+
+    function showAlert(message, type = 'success') {
+      alertBox.textContent = message;
+      alertBox.className = `alert ${type}`;
+      alertBox.style.display = 'block';
+      setTimeout(() => { alertBox.style.display = 'none'; }, 2000);
+    }
+
+    async function loadBooks() {
+      const list = document.getElementById('book-list');
+      try {
+        const response = await fetch(API_URL);
+        const data = await response.json();
+        list.innerHTML = '';
+        if (!data.length) {
+          list.innerHTML = '<li>No books available.</li>';
+        } else {
+          data.forEach(book => {
+            const li = document.createElement('li');
+            li.textContent = `${book.id} - ${book.title} by ${book.author} (₹${book.price})`;
+            list.appendChild(li);
+          });
+        }
+      } catch(err) {
+        list.innerHTML = '<li>Error loading books.</li>';
+      }
+    }
+
+    // Add Book
+    document.getElementById('add-book-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const book = {
+        id: document.getElementById('id').value || undefined,
+        title: document.getElementById('title').value,
+        author: document.getElementById('author').value,
+        price: document.getElementById('price').value,
+        published_date: document.getElementById('published_date').value
+      };
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(book)
+      });
+      if (res.ok) { showAlert('✅ Book added!'); e.target.reset(); loadBooks(); loadChartData(); }
+      else showAlert('❌ Failed to add book.', 'error');
+    });
+
+    // Update Book
+    document.getElementById('update-book-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const id = document.getElementById('update-id').value;
+      const book = {
+        title: document.getElementById('update-title').value,
+        author: document.getElementById('update-author').value,
+        price: document.getElementById('update-price').value,
+        published_date: document.getElementById('update-published_date').value
+      };
+      const res = await fetch(API_URL + id + '/', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(book)
+      });
+      if (res.ok) { showAlert('✏️ Book updated!'); e.target.reset(); loadBooks(); loadChartData(); }
+      else showAlert('❌ Failed to update book.', 'error');
+    });
+
+    // Delete Book
+    document.getElementById('delete-book-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const id = document.getElementById('delete-id').value;
+      const res = await fetch(API_URL + id + '/', { method: 'DELETE' });
+      if (res.ok) { showAlert('🗑️ Book deleted!'); e.target.reset(); loadBooks(); loadChartData(); }
+      else showAlert('❌ Failed to delete book.', 'error');
+    });
+
+    // Chart
+    async function loadChartData() {
+      try {
+        const response = await fetch(API_URL);
+        const books = await response.json();
+        if (!books.length) return;
+
+        const authorCount = {};
+        books.forEach(book => {
+          authorCount[book.author] = (authorCount[book.author] || 0) + 1;
+        });
+
+        const ctx = document.getElementById('bookChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: Object.keys(authorCount),
+            datasets: [{ label: 'Number of Books per Author', data: Object.values(authorCount), borderWidth: 1 }]
+          },
+          options: { scales: { y: { beginAtZero: true } } }
+        });
+      } catch(err) { console.error("Chart error:", err); }
+    }
+
+    // Initial load
+    loadBooks();
+    loadChartData();
+  </script>
+</body>
+</html>
+
+
+
+
