@@ -5,11 +5,12 @@ services:
     buildCommand: |
       pip install -r requirements.txt
       python manage.py collectstatic --noinput
-    startCommand: gunicorn myproject.wsgi:application
-    postDeployCommand: |
+    startCommand: |
       python manage.py makemigrations --noinput
       python manage.py migrate --noinput
+      gunicorn myproject.wsgi:application
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
+
 
