@@ -1,11 +1,18 @@
+from django.shortcuts import render
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Book
 from .serializers import BookSerializer
-import requests  # 👈 new import for Step 12
+import requests  # 👈 for external API calls
 
-# Existing CRUD views
+
+# 🌐 Home view (for rendering index.html)
+def home(request):
+    return render(request, 'index.html')
+
+
+# 📚 Existing CRUD views
 @api_view(['GET', 'POST'])
 def book_list(request):
     if request.method == 'GET':
@@ -44,7 +51,7 @@ def book_detail(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# New API integration view (Step 12)
+# 🔄 Import book using Open Library API
 @api_view(['POST'])
 def import_book(request):
     title = request.data.get('title')
