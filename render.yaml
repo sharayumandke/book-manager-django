@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: book-manager-django
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py makemigrations
+      python manage.py migrate
+    startCommand: gunicorn myproject.wsgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+
